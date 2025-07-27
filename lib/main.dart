@@ -43,9 +43,9 @@ class AppleGameScreen extends StatefulWidget {
 }
 
 class _AppleGameScreenState extends State<AppleGameScreen> {
-  static const int rows = 10;
-  static const int cols = 17;
-  static const double appleSize = 40.0;
+  static const int rows = 17;
+  static const int cols = 8; // 열 수를 줄여서 화면에 맞춤
+  static const double appleSize = 22.0;
 
   List<List<Apple>> apples = [];
   Offset? dragStart;
@@ -174,39 +174,46 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
           ),
         ],
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            child: GestureDetector(
-              onPanStart: (details) {
-                dragStart = details.localPosition;
-                dragEnd = details.localPosition;
-                isDragging = true;
-              },
-              onPanUpdate: (details) {
-                if (isDragging) {
-                  dragEnd = details.localPosition;
-                  if (dragStart != null) {
-                    updateSelection(dragStart!, dragEnd!);
-                  }
-                }
-              },
-              onPanEnd: (details) {
-                isDragging = false;
-                // 드래그가 끝나면 합계 확인
-                checkAndRemoveApples();
-                setState(() {
-                  dragStart = null;
-                  dragEnd = null;
-                });
-              },
-              child: Container(
-                width: cols * appleSize,
-                height: rows * appleSize,
-                child: Stack(
-                  children: [
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Center(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.vertical,
+                child: GestureDetector(
+                  onPanStart: (details) {
+                    dragStart = details.localPosition;
+                    dragEnd = details.localPosition;
+                    isDragging = true;
+                  },
+                  onPanUpdate: (details) {
+                    if (isDragging) {
+                      dragEnd = details.localPosition;
+                      if (dragStart != null) {
+                        updateSelection(dragStart!, dragEnd!);
+                      }
+                    }
+                  },
+                  onPanEnd: (details) {
+                    isDragging = false;
+                    // 드래그가 끝나면 합계 확인
+                    checkAndRemoveApples();
+                    setState(() {
+                      dragStart = null;
+                      dragEnd = null;
+                    });
+                  },
+                  child: Container(
+                    width: cols * appleSize,
+                    height: rows * appleSize,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Stack(
+                      children: [
                     // 사과 그리드
                     ...List.generate(rows, (row) {
                       return List.generate(cols, (col) {
@@ -221,7 +228,7 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                           child: Container(
                             width: appleSize,
                             height: appleSize,
-                            margin: const EdgeInsets.all(1),
+                            margin: const EdgeInsets.all(0.5),
                             decoration: BoxDecoration(
                               color: apple.isSelected
                                   ? Colors.red.withOpacity(0.9)
@@ -230,7 +237,7 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                                 color: apple.isSelected
                                     ? Colors.yellow
                                     : Colors.red.shade700,
-                                width: apple.isSelected ? 3 : 1,
+                                width: apple.isSelected ? 2 : 1,
                               ),
                               borderRadius: BorderRadius.circular(
                                 appleSize / 2,
@@ -239,8 +246,8 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                                   ? [
                                       BoxShadow(
                                         color: Colors.yellow.withOpacity(0.5),
-                                        blurRadius: 4,
-                                        spreadRadius: 1,
+                                        blurRadius: 2,
+                                        spreadRadius: 0.5,
                                       ),
                                     ]
                                   : null,
@@ -251,11 +258,11 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                                  fontSize: 12,
                                   shadows: [
                                     Shadow(
-                                      offset: Offset(1, 1),
-                                      blurRadius: 2,
+                                      offset: Offset(0.5, 0.5),
+                                      blurRadius: 1,
                                       color: Colors.black54,
                                     ),
                                   ],
@@ -281,7 +288,9 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                           ),
                         ),
                       ),
-                  ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
