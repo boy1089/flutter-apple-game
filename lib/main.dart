@@ -304,27 +304,6 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                 child: const Icon(Icons.refresh),
               ),
             ),
-            // 선택된 합계 표시 (왼쪽 위, 새게임 버튼 아래)
-            Positioned(
-              top: 70,
-              left: 16,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade100,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.green.shade300),
-                ),
-                child: Text(
-                  '합: ${getSelectedSum()}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
