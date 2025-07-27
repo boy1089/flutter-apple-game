@@ -1,122 +1,233 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
 void main() {
-  runApp(const MyApp());
+  runApp(const AppleGameApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class AppleGameApp extends StatelessWidget {
+  const AppleGameApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Apple Game',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+        useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const AppleGameScreen(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+class Apple {
+  final int number;
+  final int row;
+  final int col;
+  bool isSelected;
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  Apple({
+    required this.number,
+    required this.row,
+    required this.col,
+    this.isSelected = false,
+  });
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class AppleGameScreen extends StatefulWidget {
+  const AppleGameScreen({super.key});
 
-  void _incrementCounter() {
+  @override
+  State<AppleGameScreen> createState() => _AppleGameScreenState();
+}
+
+class _AppleGameScreenState extends State<AppleGameScreen> {
+  static const int rows = 10;
+  static const int cols = 17;
+  static const double appleSize = 40.0;
+
+  List<List<Apple>> apples = [];
+  Offset? dragStart;
+  Offset? dragEnd;
+  bool isDragging = false;
+
+  @override
+  void initState() {
+    super.initState();
+    initializeApples();
+  }
+
+  void initializeApples() {
+    final random = math.Random();
+    apples = List.generate(rows, (row) {
+      return List.generate(cols, (col) {
+        return Apple(
+          number: random.nextInt(9) + 1, // 1-9 사이의 랜덤 숫자
+          row: row,
+          col: col,
+        );
+      });
+    });
+  }
+
+  void updateSelection(Offset start, Offset end) {
+    // 드래그 영역에 포함된 사과들 선택
+    final minX = math.min(start.dx, end.dx);
+    final maxX = math.max(start.dx, end.dx);
+    final minY = math.min(start.dy, end.dy);
+    final maxY = math.max(start.dy, end.dy);
+
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      // 모든 사과 선택 해제
+      for (int row = 0; row < rows; row++) {
+        for (int col = 0; col < cols; col++) {
+          apples[row][col].isSelected = false;
+        }
+      }
+
+      // 드래그 영역 내의 사과들 선택
+      for (int row = 0; row < rows; row++) {
+        for (int col = 0; col < cols; col++) {
+          final appleX = col * appleSize + appleSize / 2;
+          final appleY = row * appleSize + appleSize / 2;
+
+          if (appleX >= minX &&
+              appleX <= maxX &&
+              appleY >= minY &&
+              appleY <= maxY) {
+            apples[row][col].isSelected = true;
+          }
+        }
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: const Text('Apple Game'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              setState(() {
+                initializeApples();
+              });
+            },
+          ),
+        ],
       ),
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: GestureDetector(
+              onPanStart: (details) {
+                dragStart = details.localPosition;
+                dragEnd = details.localPosition;
+                isDragging = true;
+              },
+              onPanUpdate: (details) {
+                if (isDragging) {
+                  dragEnd = details.localPosition;
+                  if (dragStart != null) {
+                    updateSelection(dragStart!, dragEnd!);
+                  }
+                }
+              },
+              onPanEnd: (details) {
+                isDragging = false;
+                setState(() {
+                  dragStart = null;
+                  dragEnd = null;
+                });
+              },
+              child: Container(
+                width: cols * appleSize,
+                height: rows * appleSize,
+                child: Stack(
+                  children: [
+                    // 사과 그리드
+                    ...List.generate(rows, (row) {
+                      return List.generate(cols, (col) {
+                        final apple = apples[row][col];
+                        return Positioned(
+                          left: col * appleSize,
+                          top: row * appleSize,
+                          child: Container(
+                            width: appleSize,
+                            height: appleSize,
+                            margin: const EdgeInsets.all(1),
+                            decoration: BoxDecoration(
+                              color: apple.isSelected
+                                  ? Colors.red.withOpacity(0.9)
+                                  : Colors.red.withOpacity(0.7),
+                              border: Border.all(
+                                color: apple.isSelected
+                                    ? Colors.yellow
+                                    : Colors.red.shade700,
+                                width: apple.isSelected ? 3 : 1,
+                              ),
+                              borderRadius: BorderRadius.circular(
+                                appleSize / 2,
+                              ),
+                              boxShadow: apple.isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: Colors.yellow.withOpacity(0.5),
+                                        blurRadius: 4,
+                                        spreadRadius: 1,
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${apple.number}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  shadows: [
+                                    Shadow(
+                                      offset: Offset(1, 1),
+                                      blurRadius: 2,
+                                      color: Colors.black54,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      });
+                    }).expand((element) => element).toList(),
+
+                    // 드래그 선택 사각형
+                    if (isDragging && dragStart != null && dragEnd != null)
+                      Positioned(
+                        left: math.min(dragStart!.dx, dragEnd!.dx),
+                        top: math.min(dragStart!.dy, dragEnd!.dy),
+                        child: Container(
+                          width: (dragEnd!.dx - dragStart!.dx).abs(),
+                          height: (dragEnd!.dy - dragStart!.dy).abs(),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.3),
+                            border: Border.all(color: Colors.blue, width: 2),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
-          ],
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }

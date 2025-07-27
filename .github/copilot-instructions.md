@@ -13,5 +13,8 @@ This is a Flutter project. When working with this codebase:
 - Use const constructors when possible for performance optimization
 - Implement proper error handling and null safety
 
-- use verbose, release while building
-- do not use hot reload
+
+
+
+# game feature
+- 
