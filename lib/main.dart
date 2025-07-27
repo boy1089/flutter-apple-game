@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:math' as math;
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // 가로모드로 고정
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ]);
+  
   runApp(const AppleGameApp());
 }
 
@@ -43,9 +52,9 @@ class AppleGameScreen extends StatefulWidget {
 }
 
 class _AppleGameScreenState extends State<AppleGameScreen> {
-  static const int rows = 17;
-  static const int cols = 8; // 열 수를 줄여서 화면에 맞춤
-  static const double appleSize = 22.0;
+  static const int rows = 8; // 행 수를 줄여서 세로 크기 감소
+  static const int cols = 16; // 열 수를 늘려서 가로로 길게
+  static const double appleSize = 28.0; // 가로모드에서 사과 크기 조금 키움
 
   List<List<Apple>> apples = [];
   Offset? dragStart;
@@ -160,60 +169,88 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text('Apple Game (선택된 합: ${getSelectedSum()})'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              setState(() {
-                initializeApples();
-              });
-            },
-          ),
-        ],
-      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(8.0),
-          child: Center(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.vertical,
-                child: GestureDetector(
-                  onPanStart: (details) {
-                    dragStart = details.localPosition;
-                    dragEnd = details.localPosition;
-                    isDragging = true;
-                  },
-                  onPanUpdate: (details) {
-                    if (isDragging) {
-                      dragEnd = details.localPosition;
-                      if (dragStart != null) {
-                        updateSelection(dragStart!, dragEnd!);
-                      }
-                    }
-                  },
-                  onPanEnd: (details) {
-                    isDragging = false;
-                    // 드래그가 끝나면 합계 확인
-                    checkAndRemoveApples();
-                    setState(() {
-                      dragStart = null;
-                      dragEnd = null;
-                    });
-                  },
-                  child: Container(
-                    width: cols * appleSize,
-                    height: rows * appleSize,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
+          child: Column(
+            children: [
+              // 상단 정보 표시
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.shade300),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '선택된 합: ${getSelectedSum()}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
                     ),
-                    child: Stack(
-                      children: [
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          initializeApples();
+                        });
+                      },
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: const Text('새게임'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              // 게임 영역
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: GestureDetector(
+                        onPanStart: (details) {
+                          dragStart = details.localPosition;
+                          dragEnd = details.localPosition;
+                          isDragging = true;
+                        },
+                        onPanUpdate: (details) {
+                          if (isDragging) {
+                            dragEnd = details.localPosition;
+                            if (dragStart != null) {
+                              updateSelection(dragStart!, dragEnd!);
+                            }
+                          }
+                        },
+                        onPanEnd: (details) {
+                          isDragging = false;
+                          // 드래그가 끝나면 합계 확인
+                          checkAndRemoveApples();
+                          setState(() {
+                            dragStart = null;
+                            dragEnd = null;
+                          });
+                        },
+                        child: Container(
+                          width: cols * appleSize,
+                          height: rows * appleSize,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Stack(
+                            children: [
                     // 사과 그리드
                     ...List.generate(rows, (row) {
                       return List.generate(cols, (col) {
@@ -258,7 +295,7 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 12,
+                                  fontSize: 14, // 가로모드에 맞게 텍스트 크기 증가
                                   shadows: [
                                     Shadow(
                                       offset: Offset(0.5, 0.5),
@@ -288,12 +325,15 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                           ),
                         ),
                       ),
-                      ],
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ),
