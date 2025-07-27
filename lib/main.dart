@@ -101,13 +101,17 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
           // 숫자가 0인 사과는 선택할 수 없음
           if (apples[row][col].number == 0) continue;
 
-          final appleX = col * appleSize + appleSize / 2;
-          final appleY = row * appleSize + appleSize / 2;
+          // 사과의 경계 좌표 계산
+          final appleLeft = col * appleSize;
+          final appleRight = appleLeft + appleSize;
+          final appleTop = row * appleSize;
+          final appleBottom = appleTop + appleSize;
 
-          if (appleX >= minX &&
-              appleX <= maxX &&
-              appleY >= minY &&
-              appleY <= maxY) {
+          // 드래그 영역과 사과 영역이 겹치는지 확인
+          if (appleRight > minX &&
+              appleLeft < maxX &&
+              appleBottom > minY &&
+              appleTop < maxY) {
             apples[row][col].isSelected = true;
           }
         }
