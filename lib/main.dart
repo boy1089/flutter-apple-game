@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math' as math;
+import 'dart:async';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // 가로모드로 고정
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
-  
+
   runApp(const AppleGameApp());
 }
 
@@ -52,19 +53,53 @@ class AppleGameScreen extends StatefulWidget {
 }
 
 class _AppleGameScreenState extends State<AppleGameScreen> {
-  static const int rows = 10; // 행 수를 늘려서 세로 크기 증가
-  static const int cols = 20; // 열 수를 늘려서 가로로 더 길게
-  static const double appleSize = 32.0; // 사과 크기를 키워서 더 보기 좋게
+  int rows = 10; // 화면 크기에 따라 동적으로 계산될 행 수
+  int cols = 20; // 화면 크기에 따라 동적으로 계산될 열 수
+  static const double appleSize = 32.0; // 사과 크기
+  static const double padding = 16.0; // 화면 여백
+  static const double uiElementsHeight = 80.0; // UI 요소들이 차지하는 높이
 
   List<List<Apple>> apples = [];
   Offset? dragStart;
   Offset? dragEnd;
   bool isDragging = false;
 
+  // 설정 관련 변수들
+  int timeLimitMinutes = 5; // 제한시간 (분) - 기본 5분
+  List<String> gameResults = []; // 게임 결과 저장
+
+  // 타이머 관련 변수들
+  Timer? gameTimer;
+  int remainingSeconds = 0;
+  bool isGameStarted = false;
+
   @override
   void initState() {
     super.initState();
-    initializeApples();
+    // startNewGame은 build에서 화면 크기를 계산한 후 호출됩니다.
+  }
+
+  void calculateGridSize(BuildContext context) {
+    // 화면 크기 가져오기
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+
+    // UI 요소들을 고려한 사용 가능한 영역 계산
+    final availableWidth = screenWidth - (padding * 2); // 좌우 여백
+    final availableHeight = screenHeight - uiElementsHeight; // 상하 UI 요소 공간
+
+    // 사과가 들어갈 수 있는 최대 행과 열 계산
+    final maxCols = (availableWidth / appleSize).floor();
+    final maxRows = (availableHeight / appleSize).floor();
+
+    // 최소값 보장 (너무 작은 화면에서도 게임이 가능하도록)
+    cols = maxCols > 5 ? maxCols : 5;
+    rows = maxRows > 3 ? maxRows : 3;
+
+    // 최대값 제한 (너무 많은 사과로 인한 성능 문제 방지)
+    if (cols > 25) cols = 25;
+    if (rows > 15) rows = 15;
   }
 
   void initializeApples() {
@@ -78,6 +113,83 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
         );
       });
     });
+  }
+
+  void startNewGame() {
+    setState(() {
+      initializeApples();
+      remainingSeconds = timeLimitMinutes * 60; // 분을 초로 변환
+      isGameStarted = true;
+    });
+
+    // 기존 타이머가 있다면 취소
+    gameTimer?.cancel();
+
+    // 새 타이머 시작
+    gameTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        if (remainingSeconds > 0) {
+          remainingSeconds--;
+        } else {
+          timer.cancel();
+          isGameStarted = false;
+          _showGameOverDialog();
+        }
+      });
+    });
+  }
+
+  void _showGameOverDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('⏰ 시간 종료!'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('제한시간이 끝났습니다.'),
+              const SizedBox(height: 10),
+              Text('남은 사과: ${_getRemainingApplesCount()}개'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                startNewGame(); // 새 게임 시작
+              },
+              child: const Text('새 게임'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  int _getRemainingApplesCount() {
+    int count = 0;
+    for (int row = 0; row < rows; row++) {
+      for (int col = 0; col < cols; col++) {
+        if (apples[row][col].number != 0) {
+          count++;
+        }
+      }
+    }
+    return count;
+  }
+
+  String _formatTime(int seconds) {
+    int minutes = seconds ~/ 60;
+    int secs = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  void dispose() {
+    gameTimer?.cancel();
+    super.dispose();
   }
 
   void updateSelection(Offset start, Offset end) {
@@ -161,8 +273,129 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
     return sum;
   }
 
+  void _showSettingsDialog(BuildContext context) {
+    int tempTimeLimitMinutes = timeLimitMinutes; // 임시 변수
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('게임 설정'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 제한시간 설정
+                  Row(
+                    children: [
+                      const Text('제한시간: '),
+                      Expanded(
+                        child: Slider(
+                          value: tempTimeLimitMinutes.toDouble(),
+                          min: 1,
+                          max: 10,
+                          divisions: 9,
+                          label: '${tempTimeLimitMinutes}분',
+                          onChanged: (double value) {
+                            setState(() {
+                              tempTimeLimitMinutes = value.toInt();
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text('${tempTimeLimitMinutes}분'),
+                  const SizedBox(height: 20),
+                  // Export 버튼
+                  ElevatedButton.icon(
+                    onPressed: _exportResults,
+                    icon: const Icon(Icons.download),
+                    label: const Text('결과 내보내기'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('취소'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    // 변경사항 저장
+                    this.setState(() {
+                      timeLimitMinutes = tempTimeLimitMinutes;
+                    });
+                    Navigator.of(context).pop();
+                    // 시간 설정이 변경되면 새 게임 시작
+                    startNewGame();
+                  },
+                  child: const Text('저장'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _exportResults() {
+    // 게임 결과를 문자열로 생성
+    final DateTime now = DateTime.now();
+    final String timestamp =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
+    String exportData = '사과 게임 결과 - $timestamp\n';
+    exportData += '=================================\n';
+    exportData += '제한시간: ${timeLimitMinutes}분\n';
+    exportData += '게임 크기: ${rows}x${cols}\n';
+    exportData += '총 사과 수: ${rows * cols}\n';
+
+    // 현재 남은 사과 개수 계산
+    int remainingApples = 0;
+    for (int row = 0; row < rows; row++) {
+      for (int col = 0; col < cols; col++) {
+        if (apples[row][col].number != 0) {
+          remainingApples++;
+        }
+      }
+    }
+
+    exportData += '제거된 사과: ${(rows * cols) - remainingApples}개\n';
+    exportData += '남은 사과: $remainingApples개\n';
+    exportData += '=================================\n';
+
+    // 실제 export 기능은 플랫폼별로 구현 필요
+    // 여기서는 디버그 콘솔에 출력
+    print(exportData);
+
+    // 사용자에게 알림
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('결과가 콘솔에 출력되었습니다'),
+        backgroundColor: Colors.orange,
+      ),
+    );
+
+    Navigator.of(context).pop(); // 설정 다이얼로그 닫기
+  }
+
   @override
   Widget build(BuildContext context) {
+    // 화면 크기에 따른 그리드 크기 계산 (한 번만 실행)
+    if (apples.isEmpty) {
+      calculateGridSize(context);
+      startNewGame();
+    }
+
     return Scaffold(
       body: SafeArea(
         child: Stack(
@@ -171,119 +404,118 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Center(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.vertical,
-                    child: GestureDetector(
-                      onPanStart: (details) {
-                        dragStart = details.localPosition;
+                child: Container(
+                  width: cols * appleSize,
+                  height: rows * appleSize,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: GestureDetector(
+                    onPanStart: (details) {
+                      dragStart = details.localPosition;
+                      dragEnd = details.localPosition;
+                      isDragging = true;
+                    },
+                    onPanUpdate: (details) {
+                      if (isDragging) {
                         dragEnd = details.localPosition;
-                        isDragging = true;
-                      },
-                      onPanUpdate: (details) {
-                        if (isDragging) {
-                          dragEnd = details.localPosition;
-                          if (dragStart != null) {
-                            updateSelection(dragStart!, dragEnd!);
-                          }
+                        if (dragStart != null) {
+                          updateSelection(dragStart!, dragEnd!);
                         }
-                      },
-                      onPanEnd: (details) {
-                        isDragging = false;
-                        // 드래그가 끝나면 합계 확인
-                        checkAndRemoveApples();
-                        setState(() {
-                          dragStart = null;
-                          dragEnd = null;
-                        });
-                      },
-                      child: Container(
-                        width: cols * appleSize,
-                        height: rows * appleSize,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Stack(
-                          children: [
-                    // 사과 그리드
-                    ...List.generate(rows, (row) {
-                      return List.generate(cols, (col) {
-                        final apple = apples[row][col];
-                        // 숫자가 0인 사과는 표시하지 않음
-                        if (apple.number == 0) {
-                          return const SizedBox.shrink();
-                        }
-                        return Positioned(
-                          left: col * appleSize,
-                          top: row * appleSize,
-                          child: Container(
-                            width: appleSize,
-                            height: appleSize,
-                            margin: const EdgeInsets.all(0.5),
-                            decoration: BoxDecoration(
-                              color: apple.isSelected
-                                  ? Colors.red.withOpacity(0.9)
-                                  : Colors.red.withOpacity(0.7),
-                              border: Border.all(
-                                color: apple.isSelected
-                                    ? Colors.yellow
-                                    : Colors.red.shade700,
-                                width: apple.isSelected ? 2 : 1,
-                              ),
-                              borderRadius: BorderRadius.circular(
-                                appleSize / 2,
-                              ),
-                              boxShadow: apple.isSelected
-                                  ? [
-                                      BoxShadow(
-                                        color: Colors.yellow.withOpacity(0.5),
-                                        blurRadius: 2,
-                                        spreadRadius: 0.5,
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                            child: Center(
-                              child: Text(
-                                '${apple.number}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16, // 큰 사과에 맞게 텍스트 크기 증가
-                                  shadows: [
-                                    Shadow(
-                                      offset: Offset(0.5, 0.5),
-                                      blurRadius: 1,
-                                      color: Colors.black54,
+                      }
+                    },
+                    onPanEnd: (details) {
+                      isDragging = false;
+                      // 드래그가 끝나면 합계 확인
+                      checkAndRemoveApples();
+                      setState(() {
+                        dragStart = null;
+                        dragEnd = null;
+                      });
+                    },
+                    child: Stack(
+                      children: [
+                        // 사과 그리드
+                        ...List.generate(rows, (row) {
+                          return List.generate(cols, (col) {
+                            final apple = apples[row][col];
+                            // 숫자가 0인 사과는 표시하지 않음
+                            if (apple.number == 0) {
+                              return const SizedBox.shrink();
+                            }
+                            return Positioned(
+                              left: col * appleSize,
+                              top: row * appleSize,
+                              child: Container(
+                                width: appleSize,
+                                height: appleSize,
+                                margin: const EdgeInsets.all(0.5),
+                                decoration: BoxDecoration(
+                                  color: apple.isSelected
+                                      ? Colors.red.withOpacity(0.9)
+                                      : Colors.red.withOpacity(0.7),
+                                  border: Border.all(
+                                    color: apple.isSelected
+                                        ? Colors.yellow
+                                        : Colors.red.shade700,
+                                    width: apple.isSelected ? 2 : 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(
+                                    appleSize / 2,
+                                  ),
+                                  boxShadow: apple.isSelected
+                                      ? [
+                                          BoxShadow(
+                                            color: Colors.yellow.withOpacity(
+                                              0.5,
+                                            ),
+                                            blurRadius: 2,
+                                            spreadRadius: 0.5,
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${apple.number}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      shadows: [
+                                        Shadow(
+                                          offset: Offset(0.5, 0.5),
+                                          blurRadius: 1,
+                                          color: Colors.black54,
+                                        ),
+                                      ],
                                     ),
-                                  ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          });
+                        }).expand((element) => element).toList(),
+
+                        // 드래그 선택 사각형
+                        if (isDragging && dragStart != null && dragEnd != null)
+                          Positioned(
+                            left: math.min(dragStart!.dx, dragEnd!.dx),
+                            top: math.min(dragStart!.dy, dragEnd!.dy),
+                            child: Container(
+                              width: (dragEnd!.dx - dragStart!.dx).abs(),
+                              height: (dragEnd!.dy - dragStart!.dy).abs(),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withOpacity(0.3),
+                                border: Border.all(
+                                  color: Colors.blue,
+                                  width: 2,
                                 ),
                               ),
                             ),
                           ),
-                        );
-                      });
-                    }).expand((element) => element).toList(),
-
-                    // 드래그 선택 사각형
-                    if (isDragging && dragStart != null && dragEnd != null)
-                      Positioned(
-                        left: math.min(dragStart!.dx, dragEnd!.dx),
-                        top: math.min(dragStart!.dy, dragEnd!.dy),
-                        child: Container(
-                          width: (dragEnd!.dx - dragStart!.dx).abs(),
-                          height: (dragEnd!.dy - dragStart!.dy).abs(),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.3),
-                            border: Border.all(color: Colors.blue, width: 2),
-                          ),
-                        ),
-                      ),
-                          ],
-                        ),
-                      ),
+                      ],
                     ),
                   ),
                 ),
@@ -292,16 +524,65 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
             // 왼쪽 위 새게임 버튼
             Positioned(
               top: 16,
-              left: 16,
+              left: 8,
               child: FloatingActionButton.small(
                 onPressed: () {
-                  setState(() {
-                    initializeApples();
-                  });
+                  startNewGame();
                 },
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
                 child: const Icon(Icons.refresh),
+              ),
+            ),
+            // 중앙 상단 타이머 표시
+            Positioned(
+              top: 4,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: remainingSeconds <= 30
+                        ? Colors.red.withOpacity(0.9)
+                        : remainingSeconds <= 60
+                        ? Colors.orange.withOpacity(0.9)
+                        : Colors.blue.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white, width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.timer, color: Colors.white, size: 12),
+                      const SizedBox(width: 4),
+                      Text(
+                        _formatTime(remainingSeconds),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // 오른쪽 위 설정 버튼
+            Positioned(
+              top: 16,
+              right: 8,
+              child: FloatingActionButton.small(
+                onPressed: () {
+                  _showSettingsDialog(context);
+                },
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                child: const Icon(Icons.settings),
               ),
             ),
           ],
