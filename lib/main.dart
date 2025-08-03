@@ -398,8 +398,8 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('게임 설정', style: TextStyle(fontSize: 10)),
-
+              actionsPadding: EdgeInsets.zero,
+              contentPadding: EdgeInsets.zero,
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -427,39 +427,40 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                     '${tempTimeLimitMinutes}분',
                     style: const TextStyle(fontSize: 10),
                   ),
-                  const SizedBox(height: 10),
                   // Export 버튼
                   ElevatedButton.icon(
                     onPressed: _exportResults,
-                    icon: const Icon(Icons.download, size: 16),
-                    label: const Text(
-                      '결과 내보내기',
-                      style: TextStyle(fontSize: 10),
-                    ),
+                    icon: const Icon(Icons.download, size: 12),
+                    label: const Text('결과 내보내기', style: TextStyle(fontSize: 8)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      minimumSize: const Size(100, 36),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      minimumSize: const Size(80, 24),
                     ),
                   ),
-                  const SizedBox(height: 8),
                   // 게임 기록 보기 버튼
                   ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(context).pop();
                       _showGameHistoryDialog();
                     },
-                    icon: const Icon(Icons.history, size: 16),
+                    icon: const Icon(Icons.history, size: 12),
                     label: const Text(
                       '게임 기록 보기',
-                      style: TextStyle(fontSize: 10),
+                      style: TextStyle(fontSize: 8),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.purple,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      minimumSize: const Size(100, 36),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      minimumSize: const Size(80, 24),
                     ),
                   ),
                 ],
@@ -469,7 +470,7 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                   onPressed: () {
                     Navigator.of(context).pop();
                   },
-                  child: const Text('취소'),
+                  child: const Text('취소', style: TextStyle(fontSize: 10)),
                 ),
                 TextButton(
                   onPressed: () {
@@ -481,7 +482,7 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                     // 시간 설정이 변경되면 새 게임 시작
                     startNewGame();
                   },
-                  child: const Text('저장'),
+                  child: const Text('저장', style: TextStyle(fontSize: 10)),
                 ),
               ],
             );
