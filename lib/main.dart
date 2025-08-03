@@ -59,7 +59,7 @@ class AppleGameScreen extends StatefulWidget {
 class _AppleGameScreenState extends State<AppleGameScreen> {
   int rows = 10; // 화면 크기에 따라 동적으로 계산될 행 수
   int cols = 20; // 화면 크기에 따라 동적으로 계산될 열 수
-  static const double appleSize = 25.0; // 사과 크기
+  static const double appleSize = 32.0; // 사과 크기
   static const double padding = 5.0; // 화면 여백
   static const double uiElementsHeight = 10.0; // UI 요소들이 차지하는 높이
 
@@ -670,8 +670,8 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                     });
                   },
                   child: Container(
-                    width: cols * appleSize,
-                    height: rows * appleSize,
+                    width: cols * appleSize + 15, // 마진을 고려한 추가 공간
+                    height: rows * appleSize + 15, // 마진을 고려한 추가 공간
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey.shade300),
                       borderRadius: BorderRadius.circular(8),
@@ -693,7 +693,7 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                               child: Container(
                                 width: appleSize,
                                 height: appleSize,
-                                margin: const EdgeInsets.all(2.0),
+                                margin: const EdgeInsets.all(5.0),
                                 decoration: BoxDecoration(
                                   color: apple.isSelected
                                       ? Colors.red.withOpacity(0.9)
@@ -725,7 +725,7 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 10,
+                                      fontSize: 12,
                                       shadows: [
                                         Shadow(
                                           offset: Offset(0.5, 0.5),
