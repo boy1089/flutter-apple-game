@@ -252,10 +252,9 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('게임 기록'),
           content: SizedBox(
             width: double.maxFinite,
-            height: 400,
+            height: 200,
             child: FutureBuilder<List<Map<String, dynamic>>>(
               future: _getSavedResults(),
               builder: (context, snapshot) {
@@ -271,6 +270,7 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
 
                 return ListView.builder(
                   itemCount: results.length,
+                  itemExtent: 20, // 각 항목의 높이 고정
                   itemBuilder: (context, index) {
                     final result = results[index];
                     final DateTime gameTime = DateTime.parse(
@@ -281,13 +281,13 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                         '${gameTime.hour.toString().padLeft(2, '0')}:${gameTime.minute.toString().padLeft(2, '0')}';
 
                     return Card(
-                      child: ListTile(
-                        leading: Icon(Icons.star, color: Colors.orange),
-                        title: Text('점수: ${result['score']}개'),
-                        subtitle: Text(
-                          '시간: ${formattedTime}\n제한시간: ${result['timerSetting']}분',
-                        ),
-                        isThreeLine: true,
+                      margin: const EdgeInsets.symmetric(
+                        vertical: 1,
+                        horizontal: 8,
+                      ),
+                      child: Text(
+                        '${formattedTime}, ${result['timerSetting']}분, 점수: ${result['score']}개',
+                        style: TextStyle(fontSize: 8),
                       ),
                     );
                   },
@@ -295,12 +295,6 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
               },
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('닫기'),
-            ),
-          ],
         );
       },
     );
