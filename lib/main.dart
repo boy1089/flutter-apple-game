@@ -407,36 +407,37 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Center(
-                child: Container(
-                  width: cols * appleSize,
-                  height: rows * appleSize,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: GestureDetector(
-                    onPanStart: (details) {
-                      dragStart = details.localPosition;
+                child: GestureDetector(
+                  onPanStart: (details) {
+                    dragStart = details.localPosition;
+                    dragEnd = details.localPosition;
+                    isDragging = true;
+                  },
+                  onPanUpdate: (details) {
+                    if (isDragging) {
                       dragEnd = details.localPosition;
-                      isDragging = true;
-                    },
-                    onPanUpdate: (details) {
-                      if (isDragging) {
-                        dragEnd = details.localPosition;
-                        if (dragStart != null) {
-                          updateSelection(dragStart!, dragEnd!);
-                        }
+                      if (dragStart != null) {
+                        updateSelection(dragStart!, dragEnd!);
                       }
-                    },
-                    onPanEnd: (details) {
-                      isDragging = false;
-                      // 드래그가 끝나면 합계 확인
-                      checkAndRemoveApples();
-                      setState(() {
-                        dragStart = null;
-                        dragEnd = null;
-                      });
-                    },
+                    }
+                  },
+                  onPanEnd: (details) {
+                    isDragging = false;
+                    // 드래그가 끝나면 합계 확인
+                    checkAndRemoveApples();
+                    setState(() {
+                      dragStart = null;
+                      dragEnd = null;
+                    });
+                  },
+                  child: Container(
+                    width: cols * appleSize,
+                    height: rows * appleSize,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.transparent, // 투명 배경으로 전체 영역 드래그 가능
+                    ),
                     child: Stack(
                       children: [
                         // 사과 그리드
