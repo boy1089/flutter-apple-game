@@ -55,9 +55,9 @@ class AppleGameScreen extends StatefulWidget {
 class _AppleGameScreenState extends State<AppleGameScreen> {
   int rows = 10; // 화면 크기에 따라 동적으로 계산될 행 수
   int cols = 20; // 화면 크기에 따라 동적으로 계산될 열 수
-  static const double appleSize = 32.0; // 사과 크기
-  static const double padding = 16.0; // 화면 여백
-  static const double uiElementsHeight = 80.0; // UI 요소들이 차지하는 높이
+  static const double appleSize = 25.0; // 사과 크기
+  static const double padding = 5.0; // 화면 여백
+  static const double uiElementsHeight = 10.0; // UI 요소들이 차지하는 높이
 
   List<List<Apple>> apples = [];
   Offset? dragStart;
@@ -96,6 +96,9 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
     // 최소값 보장 (너무 작은 화면에서도 게임이 가능하도록)
     cols = maxCols > 5 ? maxCols : 5;
     rows = maxRows > 3 ? maxRows : 3;
+
+    cols = 17;
+    rows = 10;
 
     // 최대값 제한 (너무 많은 사과로 인한 성능 문제 방지)
     if (cols > 25) cols = 25;
@@ -482,7 +485,7 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 16,
+                                      fontSize: 10,
                                       shadows: [
                                         Shadow(
                                           offset: Offset(0.5, 0.5),
@@ -536,14 +539,14 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
             ),
             // 중앙 상단 타이머 표시
             Positioned(
-              top: 4,
-              left: 0,
-              right: 0,
+              top: 65,
+              left: 8,
+
               child: Center(
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+                    horizontal: 4,
+                    vertical: 2,
                   ),
                   decoration: BoxDecoration(
                     color: remainingSeconds <= 30
@@ -563,7 +566,7 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                         _formatTime(remainingSeconds),
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 12,
+                          fontSize: 8,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
