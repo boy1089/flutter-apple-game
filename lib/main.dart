@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math' as math;
 import 'dart:async';
+import 'dart:convert';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -73,6 +75,9 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
   int remainingSeconds = 0;
   bool isGameStarted = false;
 
+  // 점수 관련 변수
+  int score = 0; // 제거한 사과 개수
+
   @override
   void initState() {
     super.initState();
@@ -119,10 +124,17 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
   }
 
   void startNewGame() {
+    // 이전 게임이 진행 중이었다면 결과 저장
+    if (isGameStarted &&
+        (score > 0 || remainingSeconds < timeLimitMinutes * 60)) {
+      _saveGameResult();
+    }
+
     setState(() {
       initializeApples();
       remainingSeconds = timeLimitMinutes * 60; // 분을 초로 변환
       isGameStarted = true;
+      score = 0; // 점수 초기화
     });
 
     // 기존 타이머가 있다면 취소
@@ -136,6 +148,7 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
         } else {
           timer.cancel();
           isGameStarted = false;
+          _saveGameResult(); // 게임 종료 시 결과 저장
           _showGameOverDialog();
         }
       });
@@ -154,6 +167,7 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
             children: [
               const Text('제한시간이 끝났습니다.'),
               const SizedBox(height: 10),
+              Text('점수: ${score}개'),
               Text('남은 사과: ${_getRemainingApplesCount()}개'),
             ],
           ),
@@ -193,6 +207,103 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
   void dispose() {
     gameTimer?.cancel();
     super.dispose();
+  }
+
+  // 게임 결과 저장 메서드
+  Future<void> _saveGameResult() async {
+    final prefs = await SharedPreferences.getInstance();
+    final DateTime now = DateTime.now();
+
+    // 게임 결과 데이터 생성
+    final Map<String, dynamic> gameResult = {
+      'datetime': now.toIso8601String(),
+      'score': score,
+      'timerSetting': timeLimitMinutes,
+    };
+
+    // 기존 결과들 가져오기
+    List<String> savedResults = prefs.getStringList('game_results') ?? [];
+
+    // 새 결과 추가
+    savedResults.add(jsonEncode(gameResult));
+
+    // 최대 100개 결과만 보관 (너무 많아지지 않도록)
+    if (savedResults.length > 100) {
+      savedResults = savedResults.sublist(savedResults.length - 100);
+    }
+
+    // 저장
+    await prefs.setStringList('game_results', savedResults);
+  }
+
+  // 저장된 게임 결과들 가져오기
+  Future<List<Map<String, dynamic>>> _getSavedResults() async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> savedResults = prefs.getStringList('game_results') ?? [];
+
+    return savedResults.map((result) {
+      return Map<String, dynamic>.from(jsonDecode(result));
+    }).toList();
+  }
+
+  // 게임 기록 다이얼로그 표시
+  void _showGameHistoryDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('게임 기록'),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 400,
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _getSavedResults(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('저장된 게임 기록이 없습니다.'));
+                }
+
+                final results = snapshot.data!.reversed.toList(); // 최신 순으로 정렬
+
+                return ListView.builder(
+                  itemCount: results.length,
+                  itemBuilder: (context, index) {
+                    final result = results[index];
+                    final DateTime gameTime = DateTime.parse(
+                      result['datetime'],
+                    );
+                    final String formattedTime =
+                        '${gameTime.year}-${gameTime.month.toString().padLeft(2, '0')}-${gameTime.day.toString().padLeft(2, '0')} '
+                        '${gameTime.hour.toString().padLeft(2, '0')}:${gameTime.minute.toString().padLeft(2, '0')}';
+
+                    return Card(
+                      child: ListTile(
+                        leading: Icon(Icons.star, color: Colors.orange),
+                        title: Text('점수: ${result['score']}개'),
+                        subtitle: Text(
+                          '시간: ${formattedTime}\n제한시간: ${result['timerSetting']}분',
+                        ),
+                        isThreeLine: true,
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('닫기'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void updateSelection(Offset start, Offset end) {
@@ -260,6 +371,8 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
             isSelected: false,
           );
         }
+        // 제거한 사과 개수만큼 점수 증가
+        score += selectedApples.length;
       });
     }
   }
@@ -285,14 +398,15 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('게임 설정'),
+              title: const Text('게임 설정', style: TextStyle(fontSize: 10)),
+
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // 제한시간 설정
                   Row(
                     children: [
-                      const Text('제한시간: '),
+                      const Text('제한시간: ', style: TextStyle(fontSize: 10)),
                       Expanded(
                         child: Slider(
                           value: tempTimeLimitMinutes.toDouble(),
@@ -309,16 +423,43 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                       ),
                     ],
                   ),
-                  Text('${tempTimeLimitMinutes}분'),
-                  const SizedBox(height: 20),
+                  Text(
+                    '${tempTimeLimitMinutes}분',
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                  const SizedBox(height: 10),
                   // Export 버튼
                   ElevatedButton.icon(
                     onPressed: _exportResults,
-                    icon: const Icon(Icons.download),
-                    label: const Text('결과 내보내기'),
+                    icon: const Icon(Icons.download, size: 16),
+                    label: const Text(
+                      '결과 내보내기',
+                      style: TextStyle(fontSize: 10),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,
                       foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      minimumSize: const Size(100, 36),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // 게임 기록 보기 버튼
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _showGameHistoryDialog();
+                    },
+                    icon: const Icon(Icons.history, size: 16),
+                    label: const Text(
+                      '게임 기록 보기',
+                      style: TextStyle(fontSize: 10),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      minimumSize: const Size(100, 36),
                     ),
                   ),
                 ],
@@ -372,8 +513,9 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
       }
     }
 
-    exportData += '제거된 사과: ${(rows * cols) - remainingApples}개\n';
+    exportData += '제거된 사과: ${score}개\n';
     exportData += '남은 사과: $remainingApples개\n';
+    exportData += '점수: ${score}점\n';
     exportData += '=================================\n';
 
     // 실제 export 기능은 플랫폼별로 구현 필요
@@ -542,7 +684,6 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
             Positioned(
               top: 65,
               left: 8,
-
               child: Center(
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -573,6 +714,34 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                       ),
                     ],
                   ),
+                ),
+              ),
+            ),
+            // 점수 표시 (타이머 아래)
+            Positioned(
+              top: 90,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white, width: 1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star, color: Colors.white, size: 12),
+                    const SizedBox(width: 4),
+                    Text(
+                      '점수: $score',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
