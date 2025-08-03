@@ -84,6 +84,7 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
   @override
   void initState() {
     super.initState();
+    _loadSettings(); // 저장된 설정 불러오기
     // startNewGame은 build에서 화면 크기를 계산한 후 호출됩니다.
   }
 
@@ -210,6 +211,30 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
   void dispose() {
     gameTimer?.cancel();
     super.dispose();
+  }
+
+  // 설정 불러오기 메서드
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      // 저장된 제한시간 설정 불러오기 (기본값: 5분)
+      timeLimitMinutes = prefs.getInt('timer_limit_minutes') ?? 5;
+
+      // 저장된 내보내기 경로 불러오기 (기본값: /storage/emulated/0)
+      exportPath = prefs.getString('export_path') ?? '/storage/emulated/0';
+    });
+  }
+
+  // 설정 저장 메서드
+  Future<void> _saveSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // 제한시간 설정 저장
+    await prefs.setInt('timer_limit_minutes', timeLimitMinutes);
+
+    // 내보내기 경로 저장
+    await prefs.setString('export_path', exportPath);
   }
 
   // 게임 결과 저장 메서드
@@ -500,6 +525,7 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                       timeLimitMinutes = tempTimeLimitMinutes;
                       exportPath = tempExportPath;
                     });
+                    _saveSettings(); // 설정을 SharedPreferences에 저장
                     Navigator.of(context).pop();
                     // 시간 설정이 변경되면 새 게임 시작
                     startNewGame();
@@ -574,15 +600,8 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
       Directory directory;
       String savePath;
 
-      if (exportPath.isNotEmpty && await Directory(exportPath).exists()) {
-        // 사용자 지정 경로가 있고 존재하는 경우
-        directory = Directory(exportPath);
-        savePath = '${directory.path}/$fileName';
-      } else {
-        // 기본 경로 사용 (앱의 Documents 디렉토리)
-        directory = await getApplicationDocumentsDirectory();
-        savePath = '${directory.path}/$fileName';
-      }
+      directory = Directory(exportPath);
+      savePath = '${directory.path}/$fileName';
 
       final file = File(savePath);
       await file.writeAsString(csvData);
