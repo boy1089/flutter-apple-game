@@ -693,7 +693,7 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                               child: Container(
                                 width: appleSize,
                                 height: appleSize,
-                                margin: const EdgeInsets.all(0.5),
+                                margin: const EdgeInsets.all(2.0),
                                 decoration: BoxDecoration(
                                   color: apple.isSelected
                                       ? Colors.red.withOpacity(0.9)
