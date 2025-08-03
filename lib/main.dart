@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:math' as math;
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -69,6 +71,7 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
   // 설정 관련 변수들
   int timeLimitMinutes = 5; // 제한시간 (분) - 기본 5분
   List<String> gameResults = []; // 게임 결과 저장
+  String exportPath = '/storage/emulated/0'; // CSV 내보내기 경로
 
   // 타이머 관련 변수들
   Timer? gameTimer;
@@ -385,6 +388,10 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
 
   void _showSettingsDialog(BuildContext context) {
     int tempTimeLimitMinutes = timeLimitMinutes; // 임시 변수
+    String tempExportPath = exportPath; // 임시 경로 변수
+    final TextEditingController pathController = TextEditingController(
+      text: exportPath,
+    );
 
     showDialog(
       context: context,
@@ -393,7 +400,7 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
           builder: (context, setState) {
             return AlertDialog(
               actionsPadding: EdgeInsets.zero,
-              contentPadding: EdgeInsets.zero,
+              contentPadding: const EdgeInsets.all(8),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -421,6 +428,26 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                     '${tempTimeLimitMinutes}분',
                     style: const TextStyle(fontSize: 10),
                   ),
+
+                  TextField(
+                    controller: pathController,
+                    style: const TextStyle(fontSize: 8),
+
+                    decoration: const InputDecoration(
+                      hintText: '예: /storage/emulated/0/Download',
+                      hintStyle: TextStyle(fontSize: 8),
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                    ),
+
+                    onChanged: (value) {
+                      tempExportPath = value;
+                    },
+                  ),
+
                   // Export 버튼
                   ElevatedButton.icon(
                     onPressed: _exportResults,
@@ -471,6 +498,7 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
                     // 변경사항 저장
                     this.setState(() {
                       timeLimitMinutes = tempTimeLimitMinutes;
+                      exportPath = tempExportPath;
                     });
                     Navigator.of(context).pop();
                     // 시간 설정이 변경되면 새 게임 시작
@@ -486,44 +514,99 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
     );
   }
 
-  void _exportResults() {
-    // 게임 결과를 문자열로 생성
-    final DateTime now = DateTime.now();
-    final String timestamp =
-        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+  void _exportResults() async {
+    // 저장된 게임 결과들 가져오기
+    final results = await _getSavedResults();
 
-    String exportData = '사과 게임 결과 - $timestamp\n';
-    exportData += '=================================\n';
-    exportData += '제한시간: ${timeLimitMinutes}분\n';
-    exportData += '게임 크기: ${rows}x${cols}\n';
-    exportData += '총 사과 수: ${rows * cols}\n';
-
-    // 현재 남은 사과 개수 계산
-    int remainingApples = 0;
-    for (int row = 0; row < rows; row++) {
-      for (int col = 0; col < cols; col++) {
-        if (apples[row][col].number != 0) {
-          remainingApples++;
-        }
-      }
+    if (results.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('내보낼 게임 기록이 없습니다'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      Navigator.of(context).pop();
+      return;
     }
 
-    exportData += '제거된 사과: ${score}개\n';
-    exportData += '남은 사과: $remainingApples개\n';
-    exportData += '점수: ${score}점\n';
-    exportData += '=================================\n';
+    try {
+      // CSV 형식으로 데이터 생성
+      String csvData = 'datetime,score,timer_setting\n'; // CSV 헤더
 
-    // 실제 export 기능은 플랫폼별로 구현 필요
-    // 여기서는 디버그 콘솔에 출력
-    print(exportData);
+      // 각 게임 결과를 CSV 행으로 추가
+      for (final result in results.reversed) {
+        // 최신 순으로 정렬
+        final DateTime gameTime = DateTime.parse(result['datetime']);
+        final String formattedTime =
+            '${gameTime.year}-${gameTime.month.toString().padLeft(2, '0')}-${gameTime.day.toString().padLeft(2, '0')} '
+            '${gameTime.hour.toString().padLeft(2, '0')}:${gameTime.minute.toString().padLeft(2, '0')}';
 
-    // 사용자에게 알림
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('결과가 콘솔에 출력되었습니다'),
-        backgroundColor: Colors.orange,
-      ),
-    );
+        csvData +=
+            '"$formattedTime",${result['score']},${result['timerSetting']}\n';
+      }
+
+      // 통계 정보 추가
+      final totalGames = results.length;
+      final totalScore = results.fold<int>(
+        0,
+        (sum, result) => sum + (result['score'] as int),
+      );
+      final avgScore = totalGames > 0
+          ? (totalScore / totalGames).toStringAsFixed(1)
+          : '0';
+      final maxScore = results.fold<int>(
+        0,
+        (max, result) =>
+            (result['score'] as int) > max ? (result['score'] as int) : max,
+      );
+
+      csvData += '\nStatistics\n';
+      csvData += 'total_games,total_score,avg_score,max_score\n';
+      csvData += '$totalGames,$totalScore,$avgScore,$maxScore\n';
+
+      // 파일명 생성
+      final DateTime now = DateTime.now();
+      final String timestamp =
+          '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+      final String fileName = 'apple_game_results_$timestamp.csv';
+
+      // 저장 경로 결정
+      Directory directory;
+      String savePath;
+
+      if (exportPath.isNotEmpty && await Directory(exportPath).exists()) {
+        // 사용자 지정 경로가 있고 존재하는 경우
+        directory = Directory(exportPath);
+        savePath = '${directory.path}/$fileName';
+      } else {
+        // 기본 경로 사용 (앱의 Documents 디렉토리)
+        directory = await getApplicationDocumentsDirectory();
+        savePath = '${directory.path}/$fileName';
+      }
+
+      final file = File(savePath);
+      await file.writeAsString(csvData);
+
+      // 성공 메시지
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${totalGames}개의 게임 기록이 CSV 파일로 저장되었습니다\n파일: $fileName\n경로: ${directory.path}',
+          ),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } catch (e) {
+      // 에러 처리
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('파일 저장 중 오류가 발생했습니다: $e\n기본 경로를 확인하거나 올바른 경로를 입력해주세요'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
 
     Navigator.of(context).pop(); // 설정 다이얼로그 닫기
   }
