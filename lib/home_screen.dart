@@ -13,10 +13,7 @@ class HomeScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Colors.blue.shade100,
-              Colors.green.shade100,
-            ],
+            colors: [Colors.blue.shade100, Colors.green.shade100],
           ),
         ),
         child: SafeArea(
@@ -36,13 +33,10 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 const Text(
                   '원하는 기능을 선택하세요',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black54,
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.black54),
                 ),
                 const SizedBox(height: 60),
-                
+
                 // 일기 버튼
                 _buildFeatureCard(
                   context,
@@ -53,14 +47,15 @@ class HomeScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const DiaryScreen(showEditorImmediately: true),
+                        builder: (context) =>
+                            const DiaryScreen(showEditorImmediately: true),
                       ),
                     );
                   },
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // 사과게임 버튼
                 _buildFeatureCard(
                   context,
@@ -96,9 +91,7 @@ class HomeScreen extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       child: Card(
         elevation: 8,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
@@ -109,10 +102,7 @@ class HomeScreen extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  color.withOpacity(0.1),
-                  color.withOpacity(0.05),
-                ],
+                colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
               ),
             ),
             child: Column(
@@ -143,10 +133,7 @@ class HomeScreen extends StatelessWidget {
                 Text(
                   subtitle,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                 ),
               ],
             ),

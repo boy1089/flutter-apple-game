@@ -54,7 +54,7 @@ class DiaryEntry {
 
 class DiaryScreen extends StatefulWidget {
   final bool showEditorImmediately;
-  
+
   const DiaryScreen({super.key, this.showEditorImmediately = false});
 
   @override
@@ -66,17 +66,17 @@ class _DiaryScreenState extends State<DiaryScreen> {
   final TextEditingController _contentController = TextEditingController();
   bool isEditing = false;
   String? editingId;
-  
+
   // 척도 변수들
   int stress = 3; // 1~5, 기본값 3
-  int state = 3; // 1~5, 기본값 3  
+  int state = 3; // 1~5, 기본값 3
   int mood = 3; // 1~5, 기본값 3
 
   @override
   void initState() {
     super.initState();
     _loadDiaryEntries();
-    
+
     // 바로 편집기를 열어야 하는 경우
     if (widget.showEditorImmediately) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -93,13 +93,14 @@ class _DiaryScreenState extends State<DiaryScreen> {
 
   Future<void> _loadDiaryEntries() async {
     final prefs = await SharedPreferences.getInstance();
-    final List<String> savedEntries = prefs.getStringList('diary_entries') ?? [];
-    
+    final List<String> savedEntries =
+        prefs.getStringList('diary_entries') ?? [];
+
     setState(() {
       diaryEntries = savedEntries.map((entry) {
         return DiaryEntry.fromJson(jsonDecode(entry));
       }).toList();
-      
+
       // 최신 순으로 정렬
       diaryEntries.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     });
@@ -110,7 +111,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
     final List<String> entriesJson = diaryEntries.map((entry) {
       return jsonEncode(entry.toJson());
     }).toList();
-    
+
     await prefs.setStringList('diary_entries', entriesJson);
   }
 
@@ -137,99 +138,136 @@ class _DiaryScreenState extends State<DiaryScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: Text(isEditing ? '일기 수정' : '새 일기 작성'),
+              contentPadding: const EdgeInsets.all(16.0),
               content: SizedBox(
                 width: double.maxFinite,
-                height: 500,
+                height: 450,
                 child: Column(
                   children: [
-                    // 스트레스 척도
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    // 스트레스 척도 - 컴팩트하게
+                    Row(
                       children: [
-                        const Text('스트레스:', style: TextStyle(fontWeight: FontWeight.bold)),
-                        Row(
-                          children: List.generate(5, (index) {
-                            final value = index + 1;
-                            return Expanded(
-                              child: Row(
-                                children: [
-                                  Radio<int>(
-                                    value: value,
-                                    groupValue: stress,
-                                    onChanged: (int? newValue) {
-                                      setDialogState(() {
-                                        stress = newValue!;
-                                      });
-                                    },
-                                  ),
-                                  Text(value.toString()),
-                                ],
-                              ),
-                            );
-                          }),
+                        const SizedBox(
+                          width: 50,
+                          child: Text(
+                            '스트레스',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
+                        ...List.generate(5, (index) {
+                          final value = index + 1;
+                          return Expanded(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Radio<int>(
+                                  value: value,
+                                  groupValue: stress,
+                                  onChanged: (int? newValue) {
+                                    setDialogState(() {
+                                      stress = newValue!;
+                                    });
+                                  },
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                                Text(
+                                  value.toString(),
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    // 상태 척도
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    // 상태 척도 - 컴팩트하게
+                    Row(
                       children: [
-                        const Text('상태:', style: TextStyle(fontWeight: FontWeight.bold)),
-                        Row(
-                          children: List.generate(5, (index) {
-                            final value = index + 1;
-                            return Expanded(
-                              child: Row(
-                                children: [
-                                  Radio<int>(
-                                    value: value,
-                                    groupValue: state,
-                                    onChanged: (int? newValue) {
-                                      setDialogState(() {
-                                        state = newValue!;
-                                      });
-                                    },
-                                  ),
-                                  Text(value.toString()),
-                                ],
-                              ),
-                            );
-                          }),
+                        const SizedBox(
+                          width: 50,
+                          child: Text(
+                            '상태',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
+                        ...List.generate(5, (index) {
+                          final value = index + 1;
+                          return Expanded(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Radio<int>(
+                                  value: value,
+                                  groupValue: state,
+                                  onChanged: (int? newValue) {
+                                    setDialogState(() {
+                                      state = newValue!;
+                                    });
+                                  },
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                                Text(
+                                  value.toString(),
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    // 기분 척도
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    // 기분 척도 - 컴팩트하게
+                    Row(
                       children: [
-                        const Text('기분:', style: TextStyle(fontWeight: FontWeight.bold)),
-                        Row(
-                          children: List.generate(5, (index) {
-                            final value = index + 1;
-                            return Expanded(
-                              child: Row(
-                                children: [
-                                  Radio<int>(
-                                    value: value,
-                                    groupValue: mood,
-                                    onChanged: (int? newValue) {
-                                      setDialogState(() {
-                                        mood = newValue!;
-                                      });
-                                    },
-                                  ),
-                                  Text(value.toString()),
-                                ],
-                              ),
-                            );
-                          }),
+                        const SizedBox(
+                          width: 50,
+                          child: Text(
+                            '기분',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
+                        ...List.generate(5, (index) {
+                          final value = index + 1;
+                          return Expanded(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Radio<int>(
+                                  value: value,
+                                  groupValue: mood,
+                                  onChanged: (int? newValue) {
+                                    setDialogState(() {
+                                      mood = newValue!;
+                                    });
+                                  },
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                                Text(
+                                  value.toString(),
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     // 내용 입력
                     Expanded(
                       child: TextField(
@@ -271,7 +309,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
 
   void _saveDiaryEntry() {
     final now = DateTime.now();
-    
+
     if (isEditing && editingId != null) {
       // 기존 일기 수정
       final index = diaryEntries.indexWhere((entry) => entry.id == editingId);
@@ -302,14 +340,14 @@ class _DiaryScreenState extends State<DiaryScreen> {
         createdAt: now,
         updatedAt: now,
       );
-      
+
       setState(() {
         diaryEntries.insert(0, newEntry);
       });
     }
 
     _saveDiaryEntries();
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(isEditing ? '일기가 수정되었습니다.' : '일기가 저장되었습니다.'),
@@ -339,7 +377,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
                 });
                 _saveDiaryEntries();
                 Navigator.of(context).pop();
-                
+
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('일기가 삭제되었습니다.'),
@@ -375,10 +413,10 @@ class _DiaryScreenState extends State<DiaryScreen> {
       };
 
       final jsonString = const JsonEncoder.withIndent('  ').convert(exportData);
-      
+
       // 모바일에서는 클립보드에 복사
       await _copyToClipboard(jsonString);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('일기 ${diaryEntries.length}개의 데이터가 클립보드에 복사되었습니다.'),
@@ -391,10 +429,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('내보내기 실패: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('내보내기 실패: $e'), backgroundColor: Colors.red),
       );
     }
   }
@@ -415,7 +450,9 @@ class _DiaryScreenState extends State<DiaryScreen> {
         title: const Text('일기 데이터'),
         content: SingleChildScrollView(
           child: Text(
-            jsonData.length > 500 ? '${jsonData.substring(0, 500)}...' : jsonData,
+            jsonData.length > 500
+                ? '${jsonData.substring(0, 500)}...'
+                : jsonData,
             style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
           ),
         ),
@@ -431,7 +468,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
 
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} '
-           '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
   // 날짜를 기반으로 제목 생성
@@ -463,19 +500,12 @@ class _DiaryScreenState extends State<DiaryScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.book_outlined,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
+                  Icon(Icons.book_outlined, size: 64, color: Colors.grey),
                   SizedBox(height: 16),
                   Text(
                     '아직 작성된 일기가 없습니다.\n오른쪽 상단의 + 버튼을 눌러 새 일기를 작성해보세요!',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                 ],
               ),
@@ -503,38 +533,56 @@ class _DiaryScreenState extends State<DiaryScreen> {
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.red.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 '스트레스 ${entry.stress}',
-                                style: const TextStyle(fontSize: 12, color: Colors.red),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.red,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.blue.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 '상태 ${entry.state}',
-                                style: const TextStyle(fontSize: 12, color: Colors.blue),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.blue,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.green.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 '기분 ${entry.mood}',
-                                style: const TextStyle(fontSize: 12, color: Colors.green),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.green,
+                                ),
                               ),
                             ),
                           ],

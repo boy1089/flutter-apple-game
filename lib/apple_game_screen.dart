@@ -622,9 +622,6 @@ class _AppleGameScreenState extends State<AppleGameScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
       body: SafeArea(
         child: Stack(
           children: [
